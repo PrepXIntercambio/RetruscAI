@@ -1,11 +1,7 @@
-// Este é o nosso "cérebro" inicial, a nossa função de IA.
-// Por enquanto, ele não é muito inteligente. Ele sempre devolve a mesma resposta.
-// Isso serve para a gente testar a conexão entre o site e a função.
+// Este é o nosso "cérebro" inicial, agora com o "crachá de autorização" (headers)
+// para que o site no GitHub possa conversar com ele.
 
 exports.handler = async function (event, context) {
-  // O código do seu site (frontend) envia a busca para nós.
-  // Por enquanto, vamos ignorar a busca e sempre responder a mesma coisa.
-
   const fakeProductData = {
     productName: "Super Nintendo (Resultado de Teste)",
     description: "Um console de videogame de 16-bits lançado nos anos 90, famoso por jogos como Super Mario World e Zelda. Esta é uma resposta de teste para garantir que nosso site está se comunicando com a função de IA.",
@@ -41,9 +37,17 @@ exports.handler = async function (event, context) {
     ]
   };
 
-  // Aqui, nós enviamos a resposta de volta para o seu site.
+  // Aqui está a MÁGICA! O "crachá de autorização".
+  const headers = {
+    'Access-Control-Allow-Origin': '*', // Permite que qualquer site acesse (ótimo para testes)
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+  };
+
+  // Enviamos a resposta com os dados E o crachá.
   return {
-    statusCode: 200, // Código 200 significa "Tudo correu bem"
-    body: JSON.stringify(fakeProductData) // Convertendo nossos dados para o formato de texto JSON
+    statusCode: 200,
+    headers: headers, // << A LINHA NOVA E IMPORTANTE!
+    body: JSON.stringify(fakeProductData)
   };
 };
