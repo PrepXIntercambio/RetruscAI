@@ -1,53 +1,55 @@
-// Este é o nosso "cérebro" inicial, agora com o "crachá de autorização" (headers)
-// para que o site no GitHub possa conversar com ele.
+// Importa o SDK do Google Generative AI
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-exports.handler = async function (event, context) {
-  const fakeProductData = {
-    productName: "Super Nintendo (Resultado de Teste)",
-    description: "Um console de videogame de 16-bits lançado nos anos 90, famoso por jogos como Super Mario World e Zelda. Esta é uma resposta de teste para garantir que nosso site está se comunicando com a função de IA.",
-    suggestions: [
-      "Verifique a condição do cartucho",
-      "Confirme se os cabos são originais",
-      "Teste com jogos diferentes"
-    ],
-    trustScore: 8.5,
-    listings: [
-      {
-        platform: "Mercado Livre",
-        title: "Super Nintendo Clássico",
-        seller: "RetroGamerSP",
-        price: "R$ 450,00",
-        reliability: 9,
-        url: "https://www.mercadolivre.com.br"
-      }
-    ],
-    reviews: [
-      {
-        source: "Canal Nostalgia (YouTube)",
-        snippet: "Um dos melhores consoles de todos os tempos...",
-        url: "https://www.youtube.com"
-      }
-    ],
-    videos: [
-      {
-        channel: "Retro Voxel",
-        title: "Análise Completa do Super Nintendo em 2025",
-        url: "https://www.youtube.com"
-      }
-    ]
-  };
+// Pega a chave da API que guardamos no "cofre" do Netlify
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
-  // Aqui está a MÁGICA! O "crachá de autorização".
-  const headers = {
-    'Access-Control-Allow-Origin': '*', // Permite que qualquer site acesse (ótimo para testes)
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
-  };
+// Este é o nosso "Super Prompt", a receita secreta do RetruscAI
+const masterPrompt = `
+Aja como um consultor especialista em produtos retrô e um historiador de cultura pop para um site chamado RetruscAI. Sua missão é criar um dossiê completo e profissional para o usuário. A resposta DEVE ser um objeto JSON.
 
-  // Enviamos a resposta com os dados E o crachá.
-  return {
-    statusCode: 200,
-    headers: headers, // << A LINHA NOVA E IMPORTANTE!
-    body: JSON.stringify(fakeProductData)
-  };
+Para o produto pesquisado, siga estas regras RIGOROSAMENTE:
+
+1.  **Análise do Produto (analysis):** Escreva uma análise detalhada e envolvente sobre o produto. Inclua seu ano de lançamento, impacto cultural, modelos icônicos e por que ele é um item de colecionador hoje. O texto deve ser profissional e informativo.
+2.  **Imagem Gerada (generatedImagePrompt):** Crie uma descrição curta e artística para uma IA de imagem gerar uma arte conceitual do produto. Exemplo: "Arte estilizada de um Walkman Sony TPS-L2 azul e prata, estilo anos 80".
+3.  **Vídeo do YouTube (youtubeVideoId):** Encontre o ID de um vídeo relevante e de alta qualidade no YouTube (um documentário, review profundo ou história do produto). Forneça APENAS o ID do vídeo, não a URL completa.
+4.  **Guia de Compra (shoppingGuide):** Dê dicas essenciais sobre o que um comprador deve verificar antes de adquirir o produto usado. Seja específico sobre pontos fracos, testes a serem feitos e sinais de boa conservação.
+5.  **Dicas de Manutenção (careTips):** Forneça um guia prático de cuidados para manter o produto funcionando e bem conservado.
+6.  **Ranking de Lojas (listings):** Crie uma lista de 4 a 6 marketplaces ou tipos de loja confiáveis para encontrar o produto no Brasil. Para cada um, forneça um 'rank', a 'platform' (nome da loja), uma 'reason' (justificativa curta e útil) e uma 'url' (o link de BUSCA para o produto naquela plataforma, não um anúncio específico).
+7.  **Sugestões (suggestions):** Sugira 3 outros produtos retrô relacionados que o usuário poderia gostar de pesquisar. Para cada um, forneça um 'name' e um 'imagePrompt' para a IA de imagem.
+
+A busca do usuário é:
+`;
+
+exports.handler = async function (event) {
+  try {
+    // Pega a busca do usuário que veio do site
+    const { query } = JSON.parse(event.body);
+
+    // Prepara o modelo de IA
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+    // Junta o nosso Super Prompt com a busca do usuário
+    const fullPrompt = masterPrompt + `"${query}"`;
+
+    const result = await model.generateContent(fullPrompt);
+    const response = await result.response;
+    const text = response.text();
+
+    // A IA responde em texto, nós limpamos e convertemos para JSON
+    const cleanJsonText = text.replace(/```json/g, "").replace(/```/g, "");
+    const jsonData = JSON.parse(cleanJsonText);
+
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(jsonData),
+    };
+  } catch (error) {
+    console.error("Erro na função da IA:", error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "Ocorreu um erro ao consultar a IA." }),
+    };
+  }
 };
