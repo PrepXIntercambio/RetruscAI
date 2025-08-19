@@ -2,7 +2,7 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Pega a chave da API que guardamos no "cofre" do Netlify
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Este é o nosso "Super Prompt", a receita secreta do RetruscAI
 const masterPrompt = `
